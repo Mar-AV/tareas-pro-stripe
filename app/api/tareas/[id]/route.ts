@@ -7,12 +7,21 @@ export async function PATCH(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const { id } = await params; // en Next 15+ los params son asíncronos
+  const { id } = await params;
   const tarea = tareas.find((t) => t.id === id);
-  if (!tarea) return Response.json({ mensaje: 'No existe' }, { status: 404 });
+  if (!tarea) {
+    return Response.json({ mensaje: 'No existe la tarea' }, { status: 404 });
+  }
 
   tarea.hecha = !tarea.hecha;
-  emitir({ tipo: 'tareas' });
+
+  // Evento propio: avisa a todas las pestañas al marcar o desmarcar una tarea.
+  emitir({
+    tipo: 'tarea_marcada',
+    aviso: tarea.hecha
+      ? `Se completó la tarea: ${tarea.titulo}`
+      : `Se marcó como pendiente: ${tarea.titulo}`,
+  });
 
   return Response.json(tarea);
 }
