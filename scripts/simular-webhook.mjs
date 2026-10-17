@@ -80,3 +80,11 @@ if (estado === 200) {
   console.log(`❓ Respondió ${estado}. Revisa la terminal donde corre npm run dev.`);
 }
 console.log('');
+
+// Evidencia adicional: una firma falsa debe recibir 400.
+const estadoInvalido = await mandar('t=0,v1=firma_invalida', 'firma incorrecta');
+if (estadoInvalido === 400) {
+  console.log('✅ Firma incorrecta rechazada con HTTP 400.');
+} else {
+  console.log(`❌ Se esperaba 400 para la firma incorrecta, se recibió ${estadoInvalido}.`);
+}
