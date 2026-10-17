@@ -2,44 +2,50 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import type { Evento } from '@/lib/eventos';
 
 export function Vivo({ conectadosInicial }: { conectadosInicial: number }) {
   const router = useRouter();
   const [conectados, setConectados] = useState(conectadosInicial);
   const [aviso, setAviso] = useState<string | null>(null);
 
+  // ESPACIO 3: escuchar los eventos y refrescar las dos pestañas automáticamente.
   useEffect(() => {
-    // ╔════════════════════════════════════════════════════════╗
-    // ║  ESPACIO 3 · Escuchar el canal                           ║
-    // ║                                                        ║
-    // ║  EventSource ya viene en el navegador. No se instala.   ║
-    // ║  Y se reconecta solo si se cae la red: eso es gratis.   ║
-    // ║                                                        ║
-    // ║   const fuente = new EventSource('/api/eventos');       ║
-    // ║                                                        ║
-    // ║   fuente.onmessage = (e) => {                           ║
-    // ║     const evento = JSON.parse(e.data);                  ║
-    // ║                                                        ║
-    // ║     if (evento.tipo === 'presencia')                    ║
-    // ║       setConectados(evento.conectados);                 ║
-    // ║                                                        ║
-    // ║     if (evento.tipo === 'tareas' ||                     ║
-    // ║         evento.tipo === 'plan') {                       ║
-    // ║       router.refresh();   // ← vuelve a pedir la página ║
-    // ║       if (evento.aviso) mostrar(evento.aviso);          ║
-    // ║     }                                                   ║
-    // ║   };                                                    ║
-    // ║                                                        ║
-    // ║   return () => fuente.close();  // ← NO se te olvide    ║
-    // ╚════════════════════════════════════════════════════════╝
+    const fuente = new EventSource('/api/eventos');
+    let temporizador: ReturnType<typeof setTimeout> | undefined;
 
-    // TODO (Bloque 2, paso 1)
+    fuente.onmessage = (mensaje) => {
+      try {
+        const evento = JSON.parse(mensaje.data) as Evento;
+
+        if (evento.tipo === 'presencia') {
+          setConectados(evento.conectados);
+          return;
+        }
+
+        if (
+          evento.tipo === 'tareas' ||
+          evento.tipo === 'plan' ||
+          evento.tipo === 'tarea_marcada'
+        ) {
+          router.refresh();
+
+          if ('aviso' in evento && evento.aviso) {
+            setAviso(evento.aviso);
+            if (temporizador) clearTimeout(temporizador);
+            temporizador = setTimeout(() => setAviso(null), 3500);
+          }
+        }
+      } catch (error) {
+        console.error('No se pudo leer el evento SSE:', error);
+      }
+    };
+
+    return () => {
+      fuente.close();
+      if (temporizador) clearTimeout(temporizador);
+    };
   }, [router]);
-
-  function mostrar(texto: string) {
-    setAviso(texto);
-    setTimeout(() => setAviso(null), 3500);
-  }
 
   return (
     <>
