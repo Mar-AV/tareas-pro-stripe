@@ -9,26 +9,20 @@ export default async function Gracias({
 }: {
   searchParams: Promise<{ sesion?: string }>;
 }) {
-  const { sesion } = await searchParams; // en Next 15+ searchParams es asíncrono
-
+  const { sesion } = await searchParams;
   let pagado = false;
 
-  // ╔════════════════════════════════════════════════════════╗
-  // ║  ESPACIO 5 · Confirmar que de verdad pagó                ║
-  // ║                                                        ║
-  // ║  Stripe nos devolvió al usuario con un id de sesión en  ║
-  // ║  la URL. Pero cualquiera puede escribir esa URL a mano. ║
-  // ║  Hay que PREGUNTARLE a Stripe, no creerle a la URL.     ║
-  // ║                                                        ║
-  // ║   const s = await stripe.checkout.sessions              ║
-  // ║                 .retrieve(sesion);                      ║
-  // ║   if (s.payment_status === 'paid') {                    ║
-  // ║     pagado = true;                                      ║
-  // ║     activarPro();                                       ║
-  // ║   }                                                     ║
-  // ╚════════════════════════════════════════════════════════╝
-  if (sesion) {
-    // TODO (Bloque 3, paso 3)
+  // ESPACIO 5: validar el pago consultando a Stripe, nunca confiar en la URL sola.
+  if (sesion?.startsWith('cs_test_') && process.env.STRIPE_SECRET_KEY?.startsWith('sk_test_')) {
+    try {
+      const s = await stripe.checkout.sessions.retrieve(sesion);
+      if (s.payment_status === 'paid' && s.mode === 'subscription') {
+        pagado = true;
+        activarPro();
+      }
+    } catch (error) {
+      console.error('No se pudo verificar el pago:', error);
+    }
   }
 
   return (
@@ -39,13 +33,10 @@ export default async function Gracias({
       </h1>
       <p className="mt-2 text-slate-600">
         {pagado
-          ? 'Vuelve a la lista: el límite de cinco tareas ya no existe. Y si dejaste otra pestaña abierta, míralas a las dos.'
-          : 'Si ya hiciste el ESPACIO 5, revisa que la URL traiga ?sesion=cs_test_…'}
+          ? 'Vuelve a la lista: el límite de cinco tareas ya no existe. La otra pestaña también se actualizará.'
+          : 'Comprueba que completaste un Checkout en modo de prueba y que la URL incluye una sesión válida.'}
       </p>
-      <Link
-        href="/"
-        className="mt-8 inline-block rounded-lg bg-slate-900 px-5 py-2.5 font-medium text-white"
-      >
+      <Link href="/" className="mt-8 inline-block rounded-lg bg-slate-900 px-5 py-2.5 font-medium text-white">
         Volver a mis tareas
       </Link>
     </main>
